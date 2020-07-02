@@ -36,6 +36,17 @@ def fill_excel(df, excel, firstRow=4, matriculeColumn='B', gradeColumn='D', stat
 	df.apply(fun, axis=1)
 
 	for matricule in index:
-		print(f'{matricule} don\'t have grade')
+		print(f'{matricule} don\'t have grade => absent')
+		ws[index[matricule]] = 0.0
+		status = statusColumn + ''.join(list(filter(lambda l: l in '0123456789', index[matricule])))
+		ws[status] = 'a'
 
 	wb.save(filename=excel)
+
+def merge_grades(**kwargs):
+	out = pd.DataFrame()
+	for col, df in kwargs.items():
+		out = out.join(df.rename(columns={'grade': col}), how='outer', rsuffix='_'+col)
+	
+	return out
+
