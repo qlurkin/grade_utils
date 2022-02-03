@@ -48,7 +48,7 @@ def to_plus_ecam_csv(df: pd.DataFrame, activity_code, path):
     df['cote'] = df['grade']
     df['ae'] = activity_code
     df = df[['ae', 'cote', 'stat']]
-    df.to_csv(path, sep=';')
+    df.to_csv(path, sep=';', encoding='utf8', index_label='matricule')
 
 def to_plus_ecam_stat(status):
     if status == 'présent':
