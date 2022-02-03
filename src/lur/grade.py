@@ -37,7 +37,10 @@ def combine(**kwargs):
         res[name] = df['grade']
     return res.fillna(0.0)
 
-def to_plus_ecam_csv(df: pd.DataFrame, activity_code, path):
+def to_plus_ecam_csv(df: pd.DataFrame, activity_code, path=None):
+    if path is None:
+        path = activity_code + '.csv'
+        
     if 'status' in df:
         df = pd.DataFrame(df[['grade', 'status']])
     else:
