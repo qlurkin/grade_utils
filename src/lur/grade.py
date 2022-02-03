@@ -2,6 +2,7 @@ from cmath import nan
 from sqlite3 import DatabaseError
 import pandas as pd
 import numpy as np
+import json
 
 def load_from_csv(path):
     dt = pd.read_csv(path, sep=';', dtype={'matricule': object})
@@ -40,7 +41,7 @@ def combine(**kwargs):
 def to_plus_ecam_csv(df: pd.DataFrame, activity_code, path=None):
     if path is None:
         path = activity_code + '.csv'
-        
+
     if 'status' in df:
         df = pd.DataFrame(df[['grade', 'status']])
     else:
@@ -61,6 +62,19 @@ def to_plus_ecam_stat(status):
     if status == 'malade':
         return 'm'
     return status
+
+def from_auto_correction(path):
+    with open(path, encoding='utf8') as file:
+        students = json.load(file)['students']
+    if 'check' in students[0]:
+        grades = {student['student']['matricule']: student['check']['grade'] for student in students}
+    else:
+        grades = {student['student']['matricule']: student['grade'] for student in students}
+    names = {student['student']['matricule']: student['student']['name'] for student in students}
+    grades = pd.Series(grades)
+    names = pd.Series(names)
+    df = pd.DataFrame({'name': names, 'grade': grades})
+    return df
 
 if __name__ == '__main__':
     data = {
