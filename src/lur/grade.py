@@ -77,6 +77,12 @@ def from_auto_correction(path):
     df = pd.DataFrame({'name': names, 'grade': grades})
     return df
 
+def round_to_half(grade):
+    return np.floor(2 * grade + 0.5)/2
+
+def round_to_tenth(grade):
+    return np.floor(10 * grade + 0.5)/10
+
 if __name__ == '__main__':
     data = {
         'matricule': ['12345', '23456', '34567'],
