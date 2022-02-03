@@ -36,7 +36,8 @@ def combine(**kwargs):
         res = res.combine_first(df[['name']])
     for name, df in kwargs.items():
         res[name] = df['grade']
-    return res.fillna(0.0)
+        res[name] = res[name].fillna(0.0)
+    return res
 
 def to_plus_ecam_csv(df: pd.DataFrame, activity_code, path=None):
     if path is None:
