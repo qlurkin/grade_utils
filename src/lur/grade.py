@@ -39,12 +39,11 @@ def combine(**kwargs):
 
 def to_plus_ecam_csv(df: pd.DataFrame, activity_code, path):
     if 'status' in df:
-        df = df[['grade', 'status']]
+        df = pd.DataFrame(df[['grade', 'status']])
     else:
-        df = df[['grade']]
+        df = pd.DataFrame(df[['grade']])
         df['status'] = np.nan
-    
-    df = pd.DataFrame(df)
+
     df['stat'] = df['status'].map(to_plus_ecam_stat)
     df['cote'] = df['grade']
     df['ae'] = activity_code
