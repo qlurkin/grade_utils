@@ -44,10 +44,11 @@ def to_plus_ecam_csv(df: pd.DataFrame, activity_code, path):
         df = df[['grade']]
         df['status'] = np.nan
     
+    df = pd.DataFrame(df)
     df['stat'] = df['status'].map(to_plus_ecam_stat)
     df['cote'] = df['grade']
     df['ae'] = activity_code
-    df = df[['ae', 'cote', 'stat']]
+    df = pd.DataFrame(df[['ae', 'cote', 'stat']])
     df.to_csv(path, sep=';', encoding='utf8', index_label='matricule')
 
 def to_plus_ecam_stat(status):
