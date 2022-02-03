@@ -1,3 +1,5 @@
+from cmath import nan
+from sqlite3 import DatabaseError
 import pandas as pd
 import numpy as np
 
@@ -34,3 +36,36 @@ def combine(**kwargs):
     for name, df in kwargs.items():
         res[name] = df['grade']
     return res.fillna(0.0)
+
+def to_plus_ecam_csv(df: pd.DataFrame, activity_code, path):
+    if 'status' in df:
+        df = df[['grade', 'status']]
+    else:
+        df = df[['grade']]
+        df['status'] = np.nan
+    
+    df['stat'] = df['status'].map(to_plus_ecam_stat)
+    df['cote'] = df['grade']
+    df['ae'] = activity_code
+    df = df[['ae', 'cote', 'stat']]
+    df.to_csv(path, sep=';')
+
+def to_plus_ecam_stat(status):
+    if status == 'présent':
+        return None
+    if status == 'absent':
+        return 'a'
+    if status == 'malade':
+        return 'm'
+    return status
+
+if __name__ == '__main__':
+    data = {
+        'matricule': ['12345', '23456', '34567'],
+        'name': ['Quentin', 'André', 'Ken'],
+        'grade': [12, 13, 14],
+        'status': ['absent', 'malade', 'présent']
+    }
+    df = pd.DataFrame(data)
+    df = df.set_index('matricule')
+    to_plus_ecam_csv(df, 'ic1t', 'uc1t.csv')
