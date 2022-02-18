@@ -1,131 +1,186 @@
+import math
+import cmath
 from numbers import Number
 import difflib
-from frozendict import frozendict
 
 def checktypes(*types):
-	def decorator(f):
-		def wrapper(*args):
-			assert len(types)==len(args), 'wrong number of types'
-			for (a, t) in zip(args,types):
-				assert isinstance(a, t), 'arg {} does not match {}'.format(a, t)
-			return f(*args)
-		return wrapper
-	return decorator
+    def decorator(f):
+        def wrapper(*args):
+            assert len(types)==len(args), 'wrong number of types'
+            for (a, t) in zip(args,types):
+                assert isinstance(a, t), 'arg {} does not match {}'.format(a, t)
+            return f(*args)
+        return wrapper
+    return decorator
 
-def getHashableVersion(a):
-	if isinstance(a, int):
-		return a
-	if isinstance(a, str):
-		return a
-	if isinstance(a, list):
-		hashableElem = []
-		for elem in a:
-			hashableElem.append(getHashableVersion(elem))
-		return tuple(hashableElem)
-	if isinstance(a, set):
-		return frozenset(a)
-	if isinstance(a, tuple):
-		hashableElem = []
-		for elem in a:
-			hashableElem.append(getHashableVersion(elem))
-		return tuple(hashableElem)
-	if isinstance(a, dict):
-		hashableValuedDict = {}
-		for key, value in a.items():
-			hashableValuedDict[key]=getHashableVersion(value)
-		return frozendict(hashableValuedDict)
-	raise TypeError('Unsupported Type for Hashable Convertion')
+@checktypes(int, int)
+def comp_int(a, b):
+    if a==b:
+        return 1.0
+    return 0.0
+
+@checktypes(float, float)
+def comp_float(a, b):
+    if math.isclose(a, b, rel_tol=1e-2):
+        return 1.0
+    return 0.0
+
+@checktypes(complex, complex)
+def comp_complex(a, b):
+    if cmath.isclose(a, b, rel_tol=1e-2):
+        return 1.0
+    return 0.0
 
 @checktypes(Number, Number)
-def comp_int(a, b):
-	if a > b:
-		return comp_int(b, a)
-	
-	if b-a > b/10:
-		return 0
-	
-	return (a-b)*10/b+1
+def comp_num(a, b):
+    if isinstance(a, float) and isinstance(b, float):
+        return comp_float(a, b)
+    if isinstance(a, int) and isinstance(b, int):
+        return comp_int(a, b)
+    if isinstance(a, int) and isinstance(b, float):
+        if b.is_integer():
+            return comp_int(a, int(b))
+        return comp_float(float(a), b)
+    if isinstance(a, float) and isinstance(b, int):
+        return comp_num(b, a)
+    if isinstance(a, complex) and isinstance(b, complex):
+        return comp_complex(a, b)
+    if isinstance(a, complex):
+        return comp_num(b, a)
+    if isinstance(b, complex):
+        if b.imag == 0.0:
+            return comp_num(b.real, a)
+        return 0.0
+
+    raise TypeError('Unsupported Number Comparaison')
 
 @checktypes(str, str)
 def comp_str(a, b):
-	return difflib.SequenceMatcher(None, a, b).ratio()
+    return (difflib.SequenceMatcher(None, a, b).ratio() * difflib.SequenceMatcher(None, b, a).ratio())**2
+
+def compute_mapping(A, B):
+    if len(A) > len(B):
+        return comp_list(B, A)
+
+    similarities = []
+    for i, elemA in enumerate(A):
+        for j, elemB in enumerate(B):
+            similarities.append({
+                'a': i,
+                'b': j,
+                'similarity': comp(elemA, elemB)
+            })
+    
+    similarities.sort(key=lambda elem: abs(elem['a'] - elem['b']))
+    similarities.sort(key=lambda elem: 1 - elem['similarity'])
+
+    flagA = len(A)*[False]
+    flagB = len(B)*[False]
+    res = []
+    for similarity in similarities:
+        if (not flagA[similarity['a']]) and (not flagB[similarity['b']]):
+            flagA[similarity['a']] = True
+            flagB[similarity['b']] = True
+            res.append(similarity)
+
+    return res
 
 @checktypes(list, list)
-def comp_list(a, b):	
-	if len(a) > len(b):
-		return comp_list(b, a)
-	
-	similarities = []
-	for i, elemA in enumerate(a):
-		for j, elemB in enumerate(b):
-			similarities.append({
-				'a': i,
-				'b': j,
-				'similarity': comp(elemA, elemB)
-			})
-	
-	similarities.sort(key=lambda elem: abs(elem['a'] - elem['b']))
-	similarities.sort(key=lambda elem: 1 - elem['similarity'])
+def comp_list(a, b):
+    if len(a) == 0 or len(b) == 0:
+        return 1.0/(max(len(b), len(a))+1)
 
-	#print(similarities)
+    similarities = compute_mapping(a, b)
 
-	flagA = len(a)*[False]
-	flagB = len(b)*[False]
-	order = len(a)*[None]
-	S = 0
-	count = 0
-	for similarity in similarities:
-		if (not flagA[similarity['a']]) and (not flagB[similarity['b']]):
-			S += similarity['similarity']
-			count += 1
-			flagA[similarity['a']] = True
-			flagB[similarity['b']] = True
-			order[similarity['a']] = similarity['b']
-			#print(similarity['a'], similarity['b'])
+    S = sum([similarity['similarity'] for similarity in similarities])
+    count = len(similarities)
 
-	#print(flagA)
-	#print(flagB)
-	#print(order)
+    order = min(len(a), len(b)) * [None]
+    for similarity in similarities:
+        order[similarity['a']] = similarity['b']
 
-	def countContiguousSwapOperation(L):
-		count = 0
-		for i in range(len(L)):
-			for j in range(len(L)-i-1):
-				if L[j] > L[j+1]:
-					L[j], L[j+1] = L[j+1], L[j]
-					count += 1
-		return count
+    def countContiguousSwapOperation(L):
+        count = 0
+        for i in range(len(L)):
+            for j in range(len(L)-i-1):
+                if L[j] > L[j+1]:
+                    L[j], L[j+1] = L[j+1], L[j]
+                    count += 1
+        return count
 
-	orderOperation = countContiguousSwapOperation(order)
-	orderFactor = orderOperation/(len(order)**2)
-	#print('order factor:', orderFactor)
+    orderOperation = countContiguousSwapOperation(order)
+    orderFactor = orderOperation/(len(order)**2)
 
-	count += len(b) - len(a)
-	return S/count * (1-orderFactor)
+    count += len(b) - len(a)
+    return S/count * (1-orderFactor)
 
 @checktypes(set, set)
 def comp_set(a, b):
-	if len(a) > len(b):
-		return comp_set(b, a)
+    if len(a) == 0 or len(b) == 0:
+        return 1.0/(max(len(b), len(a))+1)
 
-	for elem in a:
-		pass
+    similarities = compute_mapping(list(a), list(b))
 
-	
+    S = sum([similarity['similarity'] for similarity in similarities])
+    count = len(similarities)
+
+    count += len(b) - len(a)
+    return S/count
+
+@checktypes(dict, dict)
+def comp_dict(a, b):
+    if len(a) == 0 or len(b) == 0:
+        return 1.0/(max(len(b), len(a))+1)
+    keysA = list(a.keys())
+    keysB = list(b.keys())
+    similarities = compute_mapping(keysA, keysB)
+
+    S = 0
+    count = 0
+    for similarity in similarities:
+        kA = keysA[similarity['a']]
+        kB = keysB[similarity['b']]
+        simK = similarity['similarity']
+        simV = comp(a[kA], b[kB])
+        S += (simK + simV) / 2
+        count += 1
+
+    count += len(b) - len(a)
+    return S/count
+
+def comp_bool_str(b, s):
+    if isinstance(b, str):
+        return comp_bool_str(s, b)
+    assert isinstance(b, bool), "b must be a boolean"
+    assert isinstance(s, str), "s must be a string"
+    if str(b).lower() == s.lower().strip():
+        return 0.5
+    return 0.0
+
+@checktypes(tuple, tuple)
+def comp_tuple(a, b):
+    return comp_list(list(a), list(b))
+
 
 def comp(a, b):
-	if type(a) != type(b):
-		return 0
-	if isinstance(a, int):
-		return comp_int(a, b)
-	if isinstance(a, str):
-		return comp_str(a, b)
-	if isinstance(a, list):
-		return comp_list(a, b)
-	raise TypeError('Unsupported Type for Comparaison: {}'.format(type(a)))
-
-
-if __name__ == "__main__":
-	n = 100
-	print(comp(list(range(1, n)), list(range(n-1, 0, -1))))
-	print(comp([1, 1, 1], [1, 1, 1]))
+    typeGrade = 0.0
+    if (type(a) == type(b)):
+        typeGrade = 1.0
+    
+    valueGrade = 0.0
+    if (isinstance(a, str) and isinstance(b, bool)) or (isinstance(b, str) and isinstance(a, bool)):
+        valueGrade = comp_bool_str(a, b)
+    elif isinstance(a, (int, float, complex)) and isinstance(b, (int, float, complex)):
+        valueGrade = comp_num(a, b)
+    elif isinstance(a, str) and isinstance(b, str):
+        valueGrade = comp_str(a, b)
+    elif isinstance(a, list) and isinstance(b, list):
+        valueGrade = comp_list(a, b)
+    elif isinstance(a, set) and isinstance(b, set):
+        valueGrade = comp_set(a, b)
+    elif isinstance(a, dict) and isinstance(b, dict):
+        valueGrade = comp_dict(a, b)
+    elif isinstance(a, tuple) and isinstance(b, tuple):
+        valueGrade = comp_tuple(a, b)
+    
+    return 0.9 * valueGrade + 0.1 * typeGrade
