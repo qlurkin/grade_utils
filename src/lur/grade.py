@@ -28,7 +28,7 @@ def capwords(S):
     return ' '.join([w.capitalize() for w in S.split(' ')])
 
 def save(df, path):
-    df.to_json(path, indent=4, force_ascii=False)
+    df.to_json(path, orient='index', indent=4, force_ascii=False)
 
 def combine(fillna = 0.0, **kwargs):
     res = pd.DataFrame()
