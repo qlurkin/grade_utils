@@ -30,13 +30,14 @@ def capwords(S):
 def save(df, path):
     df.to_json(path, indent=4, force_ascii=False)
 
-def combine(**kwargs):
+def combine(fillna = 0.0, **kwargs):
     res = pd.DataFrame()
     for df in kwargs.values():
         res = res.combine_first(df[['name']])
     for name, df in kwargs.items():
         res[name] = df['grade']
-        res[name] = res[name].fillna(0.0)
+        if fillna is not None:
+            res[name] = res[name].fillna(fillna)
     return res
 
 def to_plus_ecam_csv(df: pd.DataFrame, activity_code, path=None):
