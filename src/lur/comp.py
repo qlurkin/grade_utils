@@ -2,6 +2,10 @@ import math
 import cmath
 from numbers import Number
 import difflib
+import numpy as np
+
+class UnorderedList(list):
+    pass
 
 def checktypes(*types):
     def decorator(f):
@@ -21,13 +25,13 @@ def comp_int(a, b):
 
 @checktypes(float, float)
 def comp_float(a, b):
-    if math.isclose(a, b, rel_tol=1e-2):
+    if math.isclose(a, b, rel_tol=1e-2, abs_tol=1e-4):
         return 1.0
     return 0.0
 
 @checktypes(complex, complex)
 def comp_complex(a, b):
-    if cmath.isclose(a, b, rel_tol=1e-2):
+    if cmath.isclose(a, b, rel_tol=1e-2, abs_tol=1e-4):
         return 1.0
     return 0.0
 
@@ -58,9 +62,13 @@ def comp_num(a, b):
 def comp_str(a, b):
     return (difflib.SequenceMatcher(None, a, b).ratio() * difflib.SequenceMatcher(None, b, a).ratio())**2
 
-def compute_mapping(A, B):
+def shorter_first(A, B):
     if len(A) > len(B):
-        return comp_list(B, A)
+        return B, A
+    return A, B
+
+def compute_mapping(A, B):
+    A, B = shorter_first(A, B)
 
     similarities = []
     for i, elemA in enumerate(A):
@@ -87,6 +95,7 @@ def compute_mapping(A, B):
 
 @checktypes(list, list)
 def comp_list(a, b):
+    a, b = shorter_first(a, b)
     if len(a) == 0 or len(b) == 0:
         return 1.0/(max(len(b), len(a))+1)
 
@@ -114,8 +123,9 @@ def comp_list(a, b):
     count += len(b) - len(a)
     return S/count * (1-orderFactor)
 
-@checktypes(set, set)
-def comp_set(a, b):
+@checktypes(UnorderedList, UnorderedList)
+def comp_unordered_list(a, b):
+    a, b = shorter_first(a, b)
     if len(a) == 0 or len(b) == 0:
         return 1.0/(max(len(b), len(a))+1)
 
@@ -127,8 +137,13 @@ def comp_set(a, b):
     count += len(b) - len(a)
     return S/count
 
+@checktypes(set, set)
+def comp_set(a, b):
+    return comp(UnorderedList(a), UnorderedList(b))
+
 @checktypes(dict, dict)
 def comp_dict(a, b):
+    a, b = shorter_first(a, b)
     if len(a) == 0 or len(b) == 0:
         return 1.0/(max(len(b), len(a))+1)
     keysA = list(a.keys())
@@ -164,6 +179,8 @@ def comp_tuple(a, b):
 
 def comp(a, b):
     typeGrade = 0.0
+    if isinstance(a, (float, complex)) and isinstance(b, (float, complex)):
+        typeGrade = 1.0
     if (type(a) == type(b)):
         typeGrade = 1.0
     
@@ -174,6 +191,8 @@ def comp(a, b):
         valueGrade = comp_num(a, b)
     elif isinstance(a, str) and isinstance(b, str):
         valueGrade = comp_str(a, b)
+    elif isinstance(a, UnorderedList) and isinstance(b, UnorderedList):
+        valueGrade = comp_unordered_list(a, b)
     elif isinstance(a, list) and isinstance(b, list):
         valueGrade = comp_list(a, b)
     elif isinstance(a, set) and isinstance(b, set):
@@ -184,3 +203,7 @@ def comp(a, b):
         valueGrade = comp_tuple(a, b)
     
     return 0.9 * valueGrade + 0.1 * typeGrade
+
+if __name__ == "__main__":
+    print(comp(np.float64(42), 42.0))
+    print(isinstance(np.float256(42), float))
