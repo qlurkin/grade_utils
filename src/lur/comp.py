@@ -55,6 +55,10 @@ def comp_num(a, b):
         if b.imag == 0.0:
             return comp_num(b.real, a)
         return 0.0
+    if isinstance(a, (np.int64, np.int32)):
+        return comp_num(int(a), b)
+    if isinstance(b, (np.int64, np.int32)):
+        return comp_num(a, int(b))
 
     raise TypeError('Unsupported Number Comparaison')
 
@@ -181,13 +185,15 @@ def comp(a, b):
     typeGrade = 0.0
     if isinstance(a, (float, complex)) and isinstance(b, (float, complex)):
         typeGrade = 1.0
+    if isinstance(a, (int, np.int64, np.int32)) and isinstance(b, (int, np.int64, np.int32)):
+        typeGrade = 1.0
     if (type(a) == type(b)):
         typeGrade = 1.0
     
     valueGrade = 0.0
     if (isinstance(a, str) and isinstance(b, bool)) or (isinstance(b, str) and isinstance(a, bool)):
         valueGrade = comp_bool_str(a, b)
-    elif isinstance(a, (int, float, complex)) and isinstance(b, (int, float, complex)):
+    elif isinstance(a, (int, float, complex, np.int32, np.int64)) and isinstance(b, (int, float, complex, np.int32, np.int64)):
         valueGrade = comp_num(a, b)
     elif isinstance(a, str) and isinstance(b, str):
         valueGrade = comp_str(a, b)
@@ -206,4 +212,10 @@ def comp(a, b):
 
 if __name__ == "__main__":
     print(comp(np.float64(42), 42.0))
-    print(isinstance(np.float256(42), float))
+    print(isinstance(np.float64(42), float))
+    print(comp(np.int64(42), 42))
+    print(comp(42, np.int64(42)))
+    print(comp(np.int64(42), np.int64(42)))
+    print(comp(list(np.array([1, 2, 3]) + np.array([3, 2, 1])), [4, 4, 4]))
+    print(comp_num(np.int64(42), 42))
+
